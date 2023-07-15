@@ -9,6 +9,5 @@ object Main {
     val twitterFactory = factory.getTwitterFactory
     val twitter = twitterFactory.getInstance()
 
-    // Utilisez l'instance `twitter` pour interagir avec l'API Twitter
   }
 }
