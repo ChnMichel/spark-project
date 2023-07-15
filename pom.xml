@@ -6,9 +6,6 @@
     <version>1.0-SNAPSHOT</version>
     <inceptionYear>2008</inceptionYear>
 
-    <properties>
-        <scala.version>2.13.5</scala.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.apache.spark</groupId>

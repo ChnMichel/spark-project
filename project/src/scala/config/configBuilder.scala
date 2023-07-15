@@ -1,3 +1,5 @@
+package src.scala.config
+
 import twitter4j.conf.ConfigurationBuilder
 
 class configBuilder {
