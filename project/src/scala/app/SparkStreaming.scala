@@ -113,8 +113,11 @@ object SparkStreaming{
     val weatherDataWithTemp = weatherData.withColumn("Température", col("Température").cast("double"))
     val avgTemp = aggregateTemperature(weatherDataWithTemp)
 
-
   }
+
+  def aggregateSnowHeight(df: DataFrame): DataFrame = {
+  df.groupBy("ID OMM station").agg(max("Hauteur totale de la couche de neige,glace,autre au sol").as("max_snow_height"))
+}
 
   def aggregateTemperature(df: DataFrame): DataFrame = {
     df.groupBy("ID OMM station").agg(avg("Température").as("avg_temperature"))
