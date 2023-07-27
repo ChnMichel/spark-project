@@ -2,6 +2,7 @@ package src.scala.app
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.streaming._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types._
@@ -18,6 +19,12 @@ object SparkStreaming{
       .master("local[*]")
       .appName("SparkStreamingApp")
       .getOrCreate()
+
+    val weatherData = spark
+      .readStream
+      .option("sep", ";")
+      .option("header", "true")
+      .csv("data/juiced_data")
 
     val dataSchema = new StructType()
       .add("ID OMM station", StringType, true)
@@ -102,5 +109,14 @@ object SparkStreaming{
       .add("region (name)", StringType, true)
       .add("region (code)", FloatType, true)
       .add("mois_de_l_annee,index", StringType, true)
+
+    val weatherDataWithTemp = weatherData.withColumn("Température", col("Température").cast("double"))
+    val avgTemp = aggregateTemperature(weatherDataWithTemp)
+
+
+  }
+
+  def aggregateTemperature(df: DataFrame): DataFrame = {
+    df.groupBy("ID OMM station").agg(avg("Température").as("avg_temperature"))
   }
 }
