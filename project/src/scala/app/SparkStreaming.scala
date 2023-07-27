@@ -1,6 +1,5 @@
 package src.scala.app
 
-import java.nio.file.Paths
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming._
@@ -11,31 +10,21 @@ import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 
 object SparkStreaming{
 
-  def aggregateTemperature(df: DataFrame): DataFrame = {
-    df.groupBy("ID OMM station")
-      .agg(avg("temperature")
-        .as("avg_temperature"))
-  }
-
-  def writeToConsole(df: DataFrame): StreamingQuery = {
-    df.writeStream
-      .outputMode("complete")
-      .format("console")
-      .start()
-  }
-
   def main(args: Array[String]): Unit = {
 
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
-
-    val currentDirectory = Paths.get("").toAbsolutePath.toString
 
     val spark = SparkSession.builder()
       .master("local[*]")
       .appName("SparkStreamingApp")
       .getOrCreate()
 
+    val weatherData = spark
+      .readStream
+      .option("sep", ";")
+      .option("header", "true")
+      .csv("data/juiced_data")
 
     val dataSchema = new StructType()
       .add("ID OMM station", StringType, true)
@@ -48,19 +37,19 @@ object SparkStreaming{
       .add("Température", FloatType, true)
       .add("Point de rosée", FloatType, true)
       .add("Humidité", FloatType, true)
-      .add("Visibilité horizontale", FloatType, false)
-      .add("Temps présent", FloatType, true)
-      .add("Temps passé 1", FloatType, true)
-      .add("Temps passé 2", FloatType, true)
-      .add("Nebulosité totale", FloatType, true)
-      .add("Nébulosité des nuages de l'étage inférieur", FloatType, false)
-      .add("Hauteur de la base des nuages de l'étage inférieur", FloatType, true)
-      .add("Type des nuages de l'étage inférieur", FloatType, true)
-      .add("Type des nuages de l'étage moyen", FloatType, true)
-      .add("Type des nuages de l'étage supérieur", FloatType, true)
-      .add("Pression station", FloatType, false)
-      .add("Niveau barométrique", FloatType, true)
-      .add("Géopotentiel", FloatType, true)
+      .add("Visibilité horizontale", "FloatType", false)
+      .add("Temps présent", "FloatType", true)
+      .add("Temps passé 1", "FloatType", true)
+      .add("Temps passé 2", "FloatType", true)
+      .add("Nebulosité totale", "FloatType", true)
+      .add("Nébulosité des nuages de l'étage inférieur", "FloatType", false)
+      .add("Hauteur de la base des nuages de l'étage inférieur", "FloatType", true)
+      .add("Type des nuages de l'étage inférieur", "FloatType", true)
+      .add("Type des nuages de l'étage moyen", "FloatType", true)
+      .add("Type des nuages de l'étage supérieur", "FloatType", true)
+      .add("Pression station", "FloatType", false)
+      .add("Niveau barométrique", "FloatType", true)
+      .add("Géopotentiel", "FloatType", true)
       .add("Variation de pression en 24 heures", FloatType, true)
       .add("Température minimale sur 12 heures", FloatType, true)
       .add("Température minimale sur 24 heures", FloatType, true)
@@ -121,22 +110,13 @@ object SparkStreaming{
       .add("region (code)", FloatType, true)
       .add("mois_de_l_annee,index", StringType, true)
 
-    val weatherData = spark
-      .readStream
-      .option("sep", ";")
-      .option("header", "true")
-      .schema(dataSchema)
-      .csv("data")
-
-    val weatherDataWithTemp = weatherData.withColumn("temperature", col("Température").cast("double"))
+    val weatherDataWithTemp = weatherData.withColumn("Température", col("Température").cast("double"))
     val avgTemp = aggregateTemperature(weatherDataWithTemp)
 
 
-    val query = writeToConsole(avgTemp)
-
-    //En attente de la fin du traitement
-    query.awaitTermination()
-
   }
 
+  def aggregateTemperature(df: DataFrame): DataFrame = {
+    df.groupBy("ID OMM station").agg(avg("Température").as("avg_temperature"))
+  }
 }
