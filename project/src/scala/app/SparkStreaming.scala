@@ -117,12 +117,12 @@ object SparkStreaming{
     val avgTemp = aggregateTemperature(weatherDataWithTemp)
     val snowHeight = aggregateSnowHeight(weatherData)
 
-    val queryAvgTemp = avgTemp
+    /*val queryAvgTemp = avgTemp
       .writeStream
       .outputMode("complete")
       .format("console")
       .trigger(Trigger.ProcessingTime("10 seconds"))
-      .start()
+      .start()*/
 
     val querySnowHeight = snowHeight
       .writeStream
