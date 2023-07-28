@@ -10,6 +10,42 @@ import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 
 object SparkStreaming{
 
+
+  def outputTerminal(df: DataFrame, method: String): StreamingQuery = {
+    df
+      .writeStream
+      .outputMode(method)
+      .format("console")
+      .trigger(Trigger.ProcessingTime("10 seconds"))
+      .start()
+  }
+
+  def execQuery(df: DataFrame, method: String, F: (DataFrame, String) => StreamingQuery): Unit = {
+    val query = F(df, method)
+    query.awaitTermination()
+  }
+
+  def avgPerMonthTemperature(df: DataFrame) : Unit = {
+    val dfWithTimestamp = df.withColumn("Timestamp", to_timestamp(col("Date"), "yyyy-MM-dd'T'HH:mm:ssXXX"))
+    val dfWithMonthAndYear = dfWithTimestamp.withColumn("Month", month(col("Timestamp"))).withColumn("Year", year(col("Timestamp")))
+    val avgTempPerMonth = dfWithMonthAndYear.groupBy("Month").agg((mean("Température") - 273.15).alias("AverageTemperature")).orderBy("Month")
+    execQuery(avgTempPerMonth, "complete", outputTerminal)
+  }
+
+  def minMaxPerStation(df: DataFrame): Unit = {
+    val minMaxTempPerStation = df.groupBy("department (name)")
+      .agg((min("Température") - 273.15).alias("MinTemperature"),
+        (max("Température") - 273.15).alias("MaxTemperature"))
+    execQuery(minMaxTempPerStation, "complete", outputTerminal)
+  }
+
+  def avgTempPerDay(df: DataFrame): Unit = {
+    val dfWithTimestamp = df.withColumn("Timestamp", to_timestamp(col("Date"), "yyyy-MM-dd'T'HH:mm:ssZ"))
+    val dfWithDate = dfWithTimestamp.withColumn("Date", to_date(col("Timestamp")))
+    val avgTempPerDay = dfWithDate.groupBy("Date").agg(mean("Température"))
+    execQuery(avgTempPerDay, "append", outputTerminal)
+  }
+
   def main(args: Array[String]): Unit = {
 
     Logger.getLogger("org").setLevel(Level.OFF)
@@ -113,34 +149,11 @@ object SparkStreaming{
       .schema(dataSchema)
       .csv("data")
 
-    val weatherDataWithTemp = weatherData.withColumn("Température", col("Température").cast("double"))
-    val avgTemp = aggregateTemperature(weatherDataWithTemp)
-    val snowHeight = aggregateSnowHeight(weatherData)
 
-    /*val queryAvgTemp = avgTemp
-      .writeStream
-      .outputMode("complete")
-      .format("console")
-      .trigger(Trigger.ProcessingTime("10 seconds"))
-      .start()*/
-
-    val querySnowHeight = snowHeight
-      .writeStream
-      .outputMode("complete")
-      .format("console")
-      .trigger(Trigger.ProcessingTime("10 seconds"))
-      .start()
-
-    querySnowHeight.awaitTermination()
+    //avgPerMonthTemperature(weatherData)
+    //minMaxPerStation(weatherData)
+    //avgTempPerDay(weatherData)
   }
 
-  def aggregateSnowHeight(df: DataFrame): DataFrame = {
-    df.groupBy("ID OMM station")
-      .agg(max("Hauteur totale de la couche de neige,glace,autre au sol")
-        .as("max_snow_height"))
-  }
 
-  def aggregateTemperature(df: DataFrame): DataFrame = {
-    df.groupBy("ID OMM station").agg(avg("Température").as("avg_temperature"))
-  }
 }
